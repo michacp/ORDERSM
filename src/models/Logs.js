@@ -47,61 +47,74 @@ LogsModels.servers_state_log_log = async (id,state) => {
   }
 };
 LogsModels.servers_state_log_logID = async (data) => {
-  console.log(data)
-const  myAggregate = await modelserverstatelogslogs.aggregate([
-  {
-    $match: {
-      id_server: new ObjectId(data.idserver),
-    },
-  },
-  {
-    $lookup: {
-      from: "logs",
-      localField: "id_logs",
-      foreignField: "_id",
-      pipeline: [
-        {
-          $project: {
-            _id: 1,
-            table: 1,
-            action: 1,
-            date: 1,
-            id_origin:1
-          },
+  //console.log(data)
+  try {
+    const  myAggregate = await modelserverstatelogslogs.aggregate([
+      {
+        $match: {
+          id_server: new ObjectId(data.idserver),
         },
-      ],
-      as: "logs",
-    },
-  },
-  { $unwind: "$logs" },
-  {
-    $lookup: {
-      from: "server_state_logs",
-      localField: "server_state_log",
-      foreignField: "_id",
-      pipeline: [
-        {
-          $project: {
-            _id: 1,
-            name:1
-          },
+      },
+      {
+        $lookup: {
+          from: "logs",
+          localField: "id_logs",
+          foreignField: "_id",
+          pipeline: [
+            {
+              $project: {
+                _id: 1,
+                table: 1,
+                action: 1,
+                date: 1,
+                id_origin:1
+              },
+            },
+          ],
+          as: "logs",
         },
-      ],
-      as: "server_state_logs",
-    },
-  },
-  { $unwind: "$server_state_logs" },
-  {
-    $project: {
-      _id: 1,
-      server_state_logs:1,
-      logs:1,
-      id_server:1,
+      },
+      { $unwind: "$logs" },
+      {
+        $lookup: {
+          from: "server_state_logs",
+          localField: "server_state_log",
+          foreignField: "_id",
+          pipeline: [
+            {
+              $match: {
+                name:'WAITING',
+              },
+            },
+            {
+              $project: {
+                _id: 1,
+                name:1
+              },
+            },
+          ],
+          as: "server_state_logs",
+        },
+      },
+      { $unwind: "$server_state_logs" },
+      {
+        $project: {
+          
+          logs:1,
+        },
+      },
+    ])
+    if(myAggregate.length==0){
+      return false
+    }else{
+      return myAggregate
+    }
+      
+    
+  } catch (error) {
+  return false  
+  }
 
-    },
-  },
-])
-  return myAggregate
 }
 async function groupjson(idstate, idlog) {
   let jsongroup = [];

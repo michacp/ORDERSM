@@ -6,7 +6,7 @@ LogsController.postallmine = async (req, res) => {
     //const data=await aux.convert(req.body)
      //
      const servers = await logsdpip.servers_state_log_logID(req.body);
-     console.log(servers)
-     res.json({servers:true});
+     //console.log(servers)
+     res.json(servers);
    };
 module.exports = LogsController;
