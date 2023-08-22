@@ -14,6 +14,7 @@ auth.Token = async (data) => {
       const pass = bq.verifyPassword(data.pasword_user, buscar[0].pasword_user);
       if (pass) {
         dats = {
+          id:buscar[0]._id,
           user: buscar[0].name_user,
           name: buscar[0].employees.first_name1 + " "+buscar[0].employees.last_name1,
           email:buscar[0].employees.email_business
@@ -26,12 +27,12 @@ auth.Token = async (data) => {
           expiresIn: "1h",
         });
         delete buscar[0].pasword_user
-        return { status: true, result: { token: token,user: buscar[0] } };
+        return  {token: token,user: buscar[0] } ;
       } else {
-        return { status: false, result: "credenciales incorrectas" };
+        return  false
       }
     } else {
-      return { status: false, result: "credenciales incorrectas" };
+      return  false
     }
   } catch (err) {
     console.log(err)
@@ -50,6 +51,7 @@ if (data1==datatoken.dats.user){
    //console.log(time)
     if(time<30){
       dats = {
+        id:buscar[0]._id,
         user: buscar[0].name_user,
         name: buscar[0].employees.first_name1 + " "+buscar[0].employees.last_name1,
         email:buscar[0].employees.email_business
@@ -84,29 +86,24 @@ const bearerHeader = req.headers["authorization"];
  
  //console.log(req.headers)
   if (typeof bearerHeader !== "undefined") {
-  const bearerToken = bearerHeader.split(" ")[1];
-    
-    req.token = bearerToken;
+  const bearerToken = bearerHeader.split(" ")[1]; 
+  req.token = bearerToken;
     //console.log(req.body)
     var cert = fs.readFileSync(key.public)//"./keys/jwtRS256.key");
     jwt.verify(req.token, cert, (error, authData) => {
       if (error) {
-       console.log(error)
-        res.json({estatustoken:false});
+       //console.log(error)
+       res.statusMessage = "NECESITA INICIAR SESIÓN";
+       res.sendStatus(401);
+       // res.json({estatustoken:false});
       } else {
-        req.toke= authData
-       // console.log('aqui')
-        
-        next();
-        
-        //res.json(authData)
-        //const app = await App.get();
-        //
+        req.toke= authData;
+         next();
       }
     });
   } else {
-  
-    res.json({estatustoken:false});
+    res.statusMessage = "NECESITA INICIAR SESIÓN";
+    res.sendStatus(401);
   }
 
 

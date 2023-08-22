@@ -15,6 +15,10 @@ const server_state_log_logScheme = new mongoose.Schema(
       type: mongoose.Types.ObjectId,
       required: true,
     },
+    notes: {
+      type: String,
+      default: ''
+    },
   },
 
   { timestamps: true }

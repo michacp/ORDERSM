@@ -3,6 +3,11 @@ const aggregatePaginate = require("mongoose-aggregate-paginate-v2");
 
 const CustomersScheme = new mongoose.Schema(
   {
+    _id: {
+      type: mongoose.Types.ObjectId,
+      required: true,
+      
+    },
     first_name1: {
       type: String,
       uppercase: true,

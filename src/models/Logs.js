@@ -1,8 +1,9 @@
 const LogsModels = {};
 const modellogs = require("../modelsdb/logs");
 const modelserverstatelog = require("../modelsdb/servers_state_logs");
-const modelserverstatelogslogs=require("../modelsdb/server_state_log_log")
+const modelserverstatelogslogs = require("../modelsdb/server_state_log_log");
 const modelserver = require("../modelsdb/serverusers");
+const modelcustomer = require("../modelsdb/customers");
 const mongoose = require("mongoose");
 const ObjectId = mongoose.Types.ObjectId;
 
@@ -15,7 +16,7 @@ LogsModels.log = async (id, table, action) => {
       date: Date.now(),
     };
     const insertar = await modellogs.create(dte);
-    LogsModels.servers_state_log_log(insertar._id,'64b6dbd7f270c2e21b255808')
+    LogsModels.servers_state_log_log(insertar._id);
     if (insertar === "error") {
       console.log("ERROR");
 
@@ -29,9 +30,11 @@ LogsModels.log = async (id, table, action) => {
     return (insertar1 = false);
   }
 };
-LogsModels.servers_state_log_log = async (id,state) => {
+LogsModels.servers_state_log_log = async (id) => {
   try {
-    const insertar = await modelserverstatelogslogs.insertMany(await groupjson(state, id));
+    const insertar = await modelserverstatelogslogs.insertMany(
+      await groupjson(id, false)
+    );
 
     if (insertar === "error") {
       console.log("ERROR");
@@ -47,9 +50,8 @@ LogsModels.servers_state_log_log = async (id,state) => {
   }
 };
 LogsModels.servers_state_log_logID = async (data) => {
-  //console.log(data)
   try {
-    const  myAggregate = await modelserverstatelogslogs.aggregate([
+    const myAggregate = await modelserverstatelogslogs.aggregate([
       {
         $match: {
           id_server: new ObjectId(data.idserver),
@@ -67,7 +69,7 @@ LogsModels.servers_state_log_logID = async (data) => {
                 table: 1,
                 action: 1,
                 date: 1,
-                id_origin:1
+                id_origin: 1,
               },
             },
           ],
@@ -83,13 +85,13 @@ LogsModels.servers_state_log_logID = async (data) => {
           pipeline: [
             {
               $match: {
-                name:'WAITING',
+                name: "WAITING",
               },
             },
             {
               $project: {
                 _id: 1,
-                name:1
+                name: 1,
               },
             },
           ],
@@ -99,36 +101,71 @@ LogsModels.servers_state_log_logID = async (data) => {
       { $unwind: "$server_state_logs" },
       {
         $project: {
-          
-          logs:1,
+          logs: 1,
         },
       },
-    ])
-    if(myAggregate.length==0){
-      return false
-    }else{
-      return myAggregate
+    ]);
+    if (myAggregate.length == 0) {
+      return false;
+    } else {
+      return myAggregate;
     }
-      
-    
   } catch (error) {
-  return false  
+    return false;
   }
-
-}
-async function groupjson(idstate, idlog) {
+};
+async function groupjson(idlog, idserver) {
   let jsongroup = [];
-  const servers =await getserver()
-  
-   for (i = 0; i < servers.length; i++) {
-    jsongroup.push({id_server: servers[i]._id, server_state_log: idstate,id_logs:idlog});
-   }
+  const servers = await getserver();
+  const serverstate = await modelserverstatelog.aggregate([
+    {
+      $project: {
+        _id: 1,
+        name: 1,
+      },
+    },
+  ]);
+
+  //console.log(serverstate)
+  for (i = 0; i < servers.length; i++) {
+    if (idserver) {
+      if (servers[i]._id.toString() === idserver.toString()) {
+        const statefind = serverstate.filter(
+          (element) => element.name == "LOGGER"
+        );
+        jsongroup.push({
+          id_server: servers[i]._id,
+          server_state_log: statefind[0]._id,
+          id_logs: idlog,
+        });
+        // console.log(servers[i]._id,idserver)
+      } else {
+        const statefind = serverstate.filter(
+          (element) => element.name == "WAITING"
+        );
+        jsongroup.push({
+          id_server: servers[i]._id,
+          server_state_log: statefind[0]._id,
+          id_logs: idlog,
+        });
+      }
+    } else {
+      const statefind = serverstate.filter(
+        (element) => element.name == "WAITING"
+      );
+      jsongroup.push({
+        id_server: servers[i]._id,
+        server_state_log: statefind[0]._id,
+        id_logs: idlog,
+      });
+    }
+  }
+  //console.log(jsongroup )
   return jsongroup;
 }
 
 async function getserver() {
   myAggregate = await modelserver.aggregate([
-
     {
       $lookup: {
         from: "states",
@@ -153,12 +190,170 @@ async function getserver() {
     },
     { $unwind: "$state" },
     {
-        $project: {
-          _id: 1,
+      $project: {
+        _id: 1,
+      },
+    },
+  ]);
+  return myAggregate;
+}
+LogsModels.gettableid = async (data) => {
+  //console.log(data)
+  try {
+    const myAggregate = await mo.aggregate([
+      {
+        $match: {
+          id_server: new ObjectId(data.idserver),
         },
       },
-  ]);
-  return myAggregate
-}
+    ]);
+    if (myAggregate.length == 0) {
+      return false;
+    } else {
+      return myAggregate;
+    }
+  } catch (error) {
+    return false;
+  }
+};
+LogsModels.getonemine = async (data) => {
+  try {
+    const idsss = await data.ids.map(function (x) {
+      return new ObjectId(x);
+    });
+    // console.log(idsss);
+    const myAggregate = await modellogs.aggregate([
+      {
+        $match: {
+          _id: { $in: idsss }, //new ObjectId(idsss[0])//{$in:idsss[0]},//new ObjectId(data.idlog)
+        },
+      },
+      {
+        $lookup: {
+          from: data.table,
+          localField: "id_origin",
+          foreignField: "_id",
 
+          as: "tabledata",
+        },
+      },
+      { $unwind: "$tabledata" },
+      {
+        $project: {
+          _id: 1,
+          table: 1,
+          action: 1,
+          tabledata: 1,
+        },
+      },
+    ]);
+    // console.log(myAggregate);
+    if (myAggregate.length == 0) {
+      return false;
+    } else {
+      return myAggregate;
+    }
+  } catch (error) {
+    return false;
+  }
+};
+
+LogsModels.savestate = async (data) => {
+  try {
+    const serverstate = await modelserverstatelog.aggregate([
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+        },
+      },
+    ]);
+    let datas = {
+      notes: data.notes,
+    };
+    if (data.status) {
+      const statefind = serverstate.filter((element) => element.name == "DONE");
+      datas.server_state_log = new ObjectId(statefind[0]._id);
+    } else {
+      const statefind = serverstate.filter(
+        (element) => element.name == "UNDONE"
+      );
+      datas.server_state_log = new ObjectId(statefind[0]._id);
+    }
+    // console.log(datas)
+    await modelserverstatelogslogs.findOneAndUpdate(
+      {
+        id_logs: new ObjectId(data.log),
+        id_server: new ObjectId(data.idserver),
+      },
+      { $set: datas },
+      {
+        returnOriginal: false,
+      }
+    );
+    //  console.log(insertar);
+    return true;
+  } catch (error) {
+    console.log(error);
+    return false;
+  }
+};
+LogsModels.savedatason = async (data) => {
+  // console.log(data)
+  try {
+    let resultstate = [];
+    const savedata = require("../modelsdb/" + data.table);
+    for (let i = 0; i < data[data.table].length; i++) {
+      //console.log(data[data.table][i].action);
+      try {
+        var save = false;
+        if (data[data.table][i].action == "create") {
+          save = await savedata.create(data[data.table][i]);
+        }
+        if (data[data.table][i].action == "edit") {
+          save = await savedata.findOneAndUpdate(
+            { _id: new ObjectId(data[data.table][i].id_origin) },
+            data[data.table][i],
+            {
+              returnOriginal: false,
+            }
+          );
+        }
+        if (save) {
+          let dte = {
+            table: data.table,
+            action: data[data.table][i].action,
+            id_origin: data[data.table][i]._id,
+            date: data[data.table][i].date,
+          };
+          const insertar = await modellogs.create(dte);
+          //console.log(insertar)
+          if (insertar) {
+            await modelserverstatelogslogs.insertMany(
+              await groupjson(insertar._id, data.idserver)
+            );
+            resultstate.push({
+              idlog: data[data.table][i].idlog,
+              stateres: true,
+            });
+          }
+        }
+
+        //  console.log(save)
+      } catch (error) {
+        console.log(error.toString());
+        resultstate.push({
+          idlog: data[data.table][i].idlog,
+          stateres: false,
+          notes: error.toString(),
+        });
+      }
+    }
+
+    // console.log(data[data.table].length)
+    return resultstate;
+  } catch (error) {
+    console.log(error);
+  }
+};
 module.exports = LogsModels;

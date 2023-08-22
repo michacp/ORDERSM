@@ -9,5 +9,5 @@ routes.get("/", AppController.index);
 routes.post('/login', AppController.login);
 // users.get('/getusergroup', AppController.usergroup);
 // users.get('/getusergener', AppController.getgender);
-// routes.get("/tokenstate",logged,AppController.tokenstate);
+ routes.get("/tokenstate",logged,AppController.tokenstate);
 module.exports = routes;

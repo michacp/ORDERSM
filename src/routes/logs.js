@@ -6,8 +6,10 @@ const LogsController = require("../Controllers/LogsController");
 const routes = express.Router();
 
 routes.post("/logget",isserver, LogsController.postallmine);
-//routes.post('/login', AppController.login);
-// users.get('/getusergroup', AppController.usergroup);
+routes.post('/getonemine',isserver, LogsController.getonemine);
+routes.post('/sendstate',isserver, LogsController.sendstate);
+routes.post('/updateson',isserver, LogsController.getsonupdate);
+
 // users.get('/getusergener', AppController.getgender);
 // routes.get("/tokenstate",logged,AppController.tokenstate);
 module.exports = routes;

@@ -20,7 +20,7 @@ const logsScheme = new mongoose.Schema(
       },
    
       id_origin: {
-        type: String,
+        type: mongoose.Types.ObjectId,
         required: true,
       },
     

@@ -1,21 +1,25 @@
 const CustomersModels = {};
 const bq = require("../helpers/bcryptjs");
 const modelcustomers = require("../modelsdb/customers");
-const Logs=require("../models/Logs")
+const Logs = require("../models/Logs");
 const modelage = require("../modelsdb/ages");
 const mongoose = require("mongoose");
 const ObjectId = mongoose.Types.ObjectId;
+const { newId } = require("../config/objectId");
+const modelgender = require("../modelsdb/gender");
 
 CustomersModels.new = async (data) => {
   try {
+    data._id = await newId();
+    console.log(data);
     const insertar = await modelcustomers.create(data);
-    const insetarlog=await Logs.log(insertar._id,'customers','create')
-    
+
     if (insertar === "error") {
       console.log("ERROR");
 
       return (insertar1 = false);
     } else {
+      await Logs.log(insertar._id, "customers", "create");
       return (insertar1 = true);
     }
   } catch (e) {
@@ -28,27 +32,20 @@ CustomersModels.edit = async (data) => {
   try {
     const insertar = await modelcustomers.findOneAndUpdate(
       { _id: data._id },
-      {
-        first_name1: data.first_name1,
-        last_name1: data.last_name1,
-        email: data.email,
-        addres: data.addres,
-        phone: data.phone,
-        gender: new ObjectId(data.gender),
-        age: new ObjectId(data.age),
-      },
+      data.data,
       {
         returnOriginal: false,
       }
     );
     if (insertar === "error") {
-      console.log("ERROR");
+      //console.log("ERROR");
       return (insertar1 = false);
     } else {
+      await Logs.log(data._id, "customers", "edit");
       return (insertar1 = true);
     }
   } catch (e) {
-    console.error(e);
+    //console.error(e.toString());
     return (insertar1 = false);
   }
 };
@@ -209,30 +206,28 @@ CustomersModels.Findby = async (data) => {
 
     const respuesta = {
       allclients: data.allclients,
-      numero_de_paginas: numero_de_paginas,
-      pagina_actual: page,
-      numero_de_entradas: total,
-      numero_entradas_por_pagina: numPerPage,
-      consumo: myAggregate[0].data,
+      page_numbers: numero_de_paginas,
+      actual_page: page,
+      number_of_records: total,
+      number_of_records_per_page: numPerPage,
+      intake: myAggregate[0].data,
     };
     return respuesta;
   } catch (err) {
-    console.log(err);
+    // console.log(err);
     return false;
   }
 };
 CustomersModels.listage = async () => {
   try {
     const groupww = await modelage.aggregate([
-      
-        { $sort : { name : 1 } },
-        {
-          $project: {
-            _id: 1,
-            name: 1,
-          },
+      { $sort: { name: 1 } },
+      {
+        $project: {
+          _id: 1,
+          name: 1,
         },
-     
+      },
     ]);
     //console.log(groupww)
     return groupww;
@@ -241,4 +236,24 @@ CustomersModels.listage = async () => {
     return false;
   }
 };
+CustomersModels.listgender = async () => {
+  console.log("customer");
+  try {
+    const groupww = await modelgender.aggregate([
+      { $sort: { name: 1 } },
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+        },
+      },
+    ]);
+    //console.log(groupww)
+    return groupww;
+  } catch (err) {
+    console.log(err);
+    return false;
+  }
+};
+
 module.exports = CustomersModels;
