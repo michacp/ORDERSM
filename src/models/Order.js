@@ -18,14 +18,16 @@ const modelstateorders = require("../modelsdb/state_numbers");
 const modeluser = require("../modelsdb/users");
 const modelissuetype = require("../modelsdb/issue_types");
 const modelstateorden = require("../modelsdb/state_orders");
-const modelnumbersorders=require("../modelsdb/number_orders")
-const modelstatenumber=require("../modelsdb/state_numbers")
-const modelcontactorders=require("../modelsdb/contacts_orders")
-const modelpayments=require("../modelsdb/payments")
-const modelnotes=require("../modelsdb/notes")
-const modelreasons=require("../modelsdb/reasons")
-const modelcauses_reasons=require("../modelsdb/cause_reasons")
-const modelcause_reasons_orders=require("../modelsdb/cause_reason_orders")
+const modelnumbersorders = require("../modelsdb/number_orders");
+const modelstatenumber = require("../modelsdb/state_numbers");
+const modelcontactorders = require("../modelsdb/contacts_orders");
+const modelpayments = require("../modelsdb/payments");
+const modelnotes = require("../modelsdb/notes");
+const modelreasons = require("../modelsdb/reasons");
+const modelcauses_reasons = require("../modelsdb/cause_reasons");
+const modelcause_reasons_orders = require("../modelsdb/cause_reason_orders");
+const contacts_orders = require("../modelsdb/contacts_orders");
+const {localbranches}=require("../config/datalocal")
 OrderModels.listpriority = async () => {
   try {
     const groupww = await modelpriority.aggregate([
@@ -120,7 +122,6 @@ OrderModels.listreasons = async () => {
 };
 OrderModels.listmodels = async (data) => {
   try {
-
     const groupww = await modelmodel.aggregate([
       {
         $match: {
@@ -144,7 +145,6 @@ OrderModels.listmodels = async (data) => {
 };
 OrderModels.listcauses = async (data) => {
   try {
-
     const groupww = await modelcauses_reasons.aggregate([
       {
         $match: {
@@ -174,7 +174,7 @@ OrderModels.listcauses = async (data) => {
         },
       },
     ]);
-  // console.log(groupww)
+    // console.log(groupww)
     return groupww;
   } catch (err) {
     console.log(err);
@@ -183,34 +183,36 @@ OrderModels.listcauses = async (data) => {
 };
 
 OrderModels.new = async (data, datauser) => {
-  
   try {
     const deviceid = await findorcreatedevice(await newiddata(data));
-    
+
     // console.log(data)
     if (deviceid) {
       if (deviceid.statusdup) {
         return deviceid;
       } else {
         numberor = await finduser_number(datauser, await newiddata(data));
-        
+
         if (numberor) {
           data.id_device = deviceid;
           data.id_number = numberor;
           /**
            * SAVE ORDERS
            */
-          
+
           const insertar = await modelorder.create(await newiddata(data));
-          
-          await modelnumbersorders.create(await savenum_orders(data,insertar._id))
-          
-          await changeuser_branches_orders(data.id_number)
-         await modelcontactorders.insertMany(data.contacts)
-         await agregatepayments(insertar._id,data.payments)
-         await agregatenotes(insertar._id,data.notes)
-         await agregatecause_reasons_orders(insertar._id,data.cause_reasons)
-        // await modelpayments.create({})
+
+          await modelnumbersorders.create(
+            await savenum_orders(data, insertar._id)
+          );
+
+          await changeuser_branches_orders(data.id_number);
+          await savecontacts_order(data.contacts, insertar._id);
+
+          await agregatepayments(insertar._id, data.payments);
+          await agregatenotes(insertar._id, data.notes);
+          await agregatecause_reasons_orders(insertar._id, data.cause_reasons);
+          // await modelpayments.create({})
           if (insertar === "error") {
             console.log("ERROR");
 
@@ -354,7 +356,7 @@ OrderModels.numberorder = async (user) => {
       $match: {
         id_employees: new ObjectId(user),
         id_statenumber: aaaa[0]._id,
-        id_branches: new ObjectId("649ca6fe27dc1c1b91331c81"),
+        id_branches: new ObjectId(localbranches),
       },
     },
     {
@@ -373,7 +375,7 @@ OrderModels.numberorder = async (user) => {
       _id: await newId(),
       number: await getNextSequenceValue("sequorder"),
       id_employees: new ObjectId(user),
-      id_branches: new ObjectId("649ca6fe27dc1c1b91331c81"),
+      id_branches: new ObjectId(localbranches),
       id_statenumber: aaaa[0]._id,
     });
     //console.log(number)
@@ -381,10 +383,299 @@ OrderModels.numberorder = async (user) => {
   }
 };
 
+OrderModels.listorders = async (data) => {
+  try {
+    var findby = data.findlike;
+    var myAggregate;
+    var page = data.pagination;
+    var numPerPage = data.numperpage;
+    var skip = (page - 1) * numPerPage;
+    if (!data.findlike) {
+      findby = "";
+    }
+    myAggregate = await modelnumbersorders.aggregate([
+      {
+        $lookup: {
+          from: "state_orders",
+          localField: "id_state_orders",
+          foreignField: "_id",
+          pipeline: [
+            {
+              $project: {
+                _id: 1,
+                name_state_orders: 1,
+              },
+            },
+          ],
+          as: "state_orders",
+        },
+      },
+      { $unwind: "$state_orders" },
+      {
+        $lookup: {
+          from: "issue_types",
+          localField: "id_issue_type",
+          foreignField: "_id",
+          pipeline: [
+            {
+              $project: {
+                _id: 1,
+                name_issue: 1,
+              },
+            },
+          ],
+          as: "issue_types",
+        },
+      },
+      { $unwind: "$issue_types" },
+      {
+        $lookup: {
+          from: "user_branche_number_orders",
+          localField: "id_user_branche_number_orders",
+          foreignField: "_id",
+          pipeline: [
+            {
+              $lookup: {
+                from: "users",
+                localField: "id_employees",
+                foreignField: "_id",
+                pipeline: [
+                  {
+                    $project: {
+                      _id: 1,
+                      name_user: 1,
+                    },
+                  },
+                ],
+                as: "users",
+              },
+            },
+            { $unwind: "$users" },
+            {
+              $lookup: {
+                from: "branches",
+                localField: "id_branches",
+                foreignField: "_id",
+                pipeline: [
+                  {
+                    $project: {
+                      _id: 1,
+                      name: 1,
+                    },
+                  },
+                ],
+                as: "branches",
+              },
+            },
+            { $unwind: "$branches" },
+            {
+              $project: {
+                _id: 1,
+                number: 1,
+                users: 1,
+                branches: 1,
+              },
+            },
+          ],
+          as: "user_branches_orders",
+        },
+      },
+      { $unwind: "$user_branches_orders" },
+      {
+        $lookup: {
+          from: "orders",
+          localField: "id_orders",
+          foreignField: "_id",
+          pipeline: [
+            {
+              $lookup: {
+                from: "prioritys",
+                localField: "id_priority",
+                foreignField: "_id",
+                pipeline: [
+                  {
+                    $project: {
+                      _id: 1,
+                      name: 1,
+                    },
+                  },
+                ],
+                as: "prioritys",
+              },
+            },
+            { $unwind: "$prioritys" },
+            {
+              $lookup: {
+                from: "device_orders",
+                localField: "id_device",
+                foreignField: "_id",
+                pipeline: [
+                  {
+                    $lookup: {
+                      from: "models",
+                      localField: "id_model",
+                      foreignField: "_id",
+                      pipeline: [
+                        {
+                          $lookup: {
+                            from: "brands",
+                            localField: "id_brands",
+                            foreignField: "_id",
+                            pipeline: [
+                              {
+                                $project: {
+                                  _id: 1,
+                                  name_brands: 1,
+                                },
+                              },
+                            ],
+                            as: "brands",
+                          },
+                        },
+                        { $unwind: "$brands" },
+                        {
+                          $project: {
+                            _id: 1,
+                            business_model:1,
+                            technical_model:1,
+                            brands:1,
+
+                          },
+                        },
+                      ],
+                      as: "models",
+                    },
+                  },
+                  { $unwind: "$models" },
+                  {
+                    $project: {
+                      _id: 1,
+                      id_model: 1,
+                      models:1
+                    },
+                  },
+                ],
+                as: "device_orders",
+              },
+            },
+            { $unwind: "$device_orders" },
+            {
+              $lookup: {
+                from: "contacts_orders",
+                localField: "_id",
+                foreignField: "id_order",
+                pipeline: [
+                  {
+                    $project: {
+                      _id: 1,
+                      contact_order: 1,
+                    },
+                  },
+                ],
+                as: "contacts",
+              },
+            },
+            {
+              $lookup: {
+                from: "customers",
+                localField: "id_customer",
+                foreignField: "_id",
+                pipeline: [
+                  {
+                    $project: {
+                      _id: 1,
+                      first_name1: 1,
+                      last_name1: 1,
+                    },
+                  },
+                ],
+                as: "customers",
+              },
+            },
+            { $unwind: "$customers" },
+            {
+              $project: {
+                _id: 1,
+                information_adicional: 1,
+                prioritys: 1,
+                contacts: 1,
+                customers: 1,
+                device_orders:1,
+              },
+            },
+          ],
+          as: "orders",
+        },
+      },
+      { $unwind: "$orders" },
+      {
+        $project: {
+          _id: 1,
+          date: 1,
+          state_orders: 1,
+          issue_types: 1,
+          orders: 1,
+          user_branches_orders: 1,
+        },
+      },
+
+      { $sort: { date: -1 } },
+      {
+        $facet: {
+          metadata: [
+            { $count: "total" },
+            { $addFields: { page: Number(page) } },
+          ],
+          data: [{ $skip: skip }, { $limit: numPerPage }], // add projection here wish you re-shape the docs
+        },
+      },
+    ]);
+    var numero_de_paginas;
+    var total;
+    if (myAggregate[0].metadata.length == 0) {
+      numero_de_paginas = Math.trunc(0 / numPerPage) + 1;
+      total = 0;
+    } else {
+      numero_de_paginas =
+        Math.trunc(myAggregate[0].metadata[0].total / numPerPage) + 1;
+      total = myAggregate[0].metadata[0].total;
+    }
+
+    const respuesta = {
+      allclients: data.allclients,
+      page_numbers: numero_de_paginas,
+      actual_page: page,
+      number_of_records: total,
+      number_of_records_per_page: numPerPage,
+      intake: myAggregate[0].data,
+    };
+    return respuesta;
+  } catch (error) {
+    return false;
+  }
+};
 /**
  *
  * funciones extra
  */
+
+async function savecontacts_order(data, order) {
+  //console.log(order)
+  try {
+    data = await Promise.all(
+      data.map(async function (num) {
+        return {
+          _id: await newId(),
+          contact_order: num.value,
+          id_order: order,
+        };
+      })
+    );
+    await contacts_orders.insertMany(data);
+  } catch (error) {
+    //  console.log(error)
+  }
+}
 
 async function findorcreatedevice(data) {
   try {
@@ -511,11 +802,9 @@ async function findorcreatedevice(data) {
   }
 }
 async function finduser_number(datauser, data) {
-  
   try {
-    
     const getnumbersave = await numberfunctionorder(datauser.id);
-    
+
     if (
       data.id_number == getnumbersave.number &&
       data.issue_type == (await issuenormal())
@@ -528,7 +817,7 @@ async function finduser_number(datauser, data) {
             _id: await newId(),
             number: data.id_number,
             id_employees: new ObjectId(datauser.id),
-            id_branches: new ObjectId("649ca6fe27dc1c1b91331c81"),
+            id_branches: new ObjectId(localbranches),
             id_statenumber: new ObjectId("64ce8e2011e407d0a17b8481"),
           });
           //console.log(number.number)
@@ -537,20 +826,17 @@ async function finduser_number(datauser, data) {
           return false;
         }
       } else {
-       
         return false;
       }
     }
 
     // return true
   } catch (error) {
-    
     return false;
   }
 }
 
 async function numberfunctionorder(user) {
-  
   const aaaa = await modelstateorders.aggregate([
     {
       $match: {
@@ -563,13 +849,13 @@ async function numberfunctionorder(user) {
       },
     },
   ]);
-  
+
   const isreservednumber = await modeluser_branche_number_orders.aggregate([
     {
       $match: {
         id_employees: new ObjectId(user),
         id_statenumber: aaaa[0]._id,
-        id_branches: new ObjectId("649ca6fe27dc1c1b91331c81"),
+        id_branches: new ObjectId(localbranches),
       },
     },
     {
@@ -585,20 +871,18 @@ async function numberfunctionorder(user) {
     return isreservednumber[0];
   } else {
     try {
-      
       const number = await modeluser_branche_number_orders.create({
-        _id:await newId(),
+        _id: await newId(),
         number: await getNextSequenceValue("sequorder"),
         id_employees: new ObjectId(user),
-        id_branches: new ObjectId("649ca6fe27dc1c1b91331c81"),
+        id_branches: new ObjectId(localbranches),
         id_statenumber: aaaa[0]._id,
       });
-    
+
       return number;
     } catch (error) {
       //console.log(error)
     }
-
   }
 }
 async function issuephysyca() {
@@ -645,23 +929,23 @@ async function issuenormal() {
     return false;
   }
 }
-async function savenum_orders(data,orderid) {
+async function savenum_orders(data, orderid) {
   //console.log(data);
   try {
-    const datasave= {_id:await newId(),
-  
-      id_state_orders:await stateorden("OPEN"),
-      id_user_branche_number_orders:data.id_number,
-      id_orders:orderid,
-      date:Date.now(),
-      id_issue_type:data.issue_type}
-    
-      return datasave
-  } catch (error) {
-   
-    return false
-  }
+    const datasave = {
+      _id: await newId(),
 
+      id_state_orders: await stateorden("OPEN"),
+      id_user_branche_number_orders: data.id_number,
+      id_orders: orderid,
+      date: Date.now(),
+      id_issue_type: data.issue_type,
+    };
+
+    return datasave;
+  } catch (error) {
+    return false;
+  }
 }
 async function newiddata(data) {
   data._id = await newId();
@@ -673,7 +957,7 @@ async function stateorden(data) {
     const groupww = await modelstateorden.aggregate([
       {
         $match: {
-          name_state_orders:data ,
+          name_state_orders: data,
         },
       },
       {
@@ -688,23 +972,23 @@ async function stateorden(data) {
     return false;
   }
 }
-async function changeuser_branches_orders(data){
-try {
-  const state=await getstatenumber("NO AVALIABLE")
- const ddd=await modeluser_branche_number_orders.findOneAndUpdate(
-  { _id: data },
-  {id_statenumber:state} ,
-  {
-    returnOriginal: false,
+async function changeuser_branches_orders(data) {
+  try {
+    const state = await getstatenumber("NO AVALIABLE");
+    const ddd = await modeluser_branche_number_orders.findOneAndUpdate(
+      { _id: data },
+      { id_statenumber: state },
+      {
+        returnOriginal: false,
+      }
+    );
+    // console.log(ddd)
+  } catch (error) {
+    console.log(error);
   }
-  )
- // console.log(ddd)
-} catch (error) {
-  console.log(error)
-}
 }
 
-async function getstatenumber(data){
+async function getstatenumber(data) {
   try {
     const aaaa = await modelstateorders.aggregate([
       {
@@ -718,50 +1002,44 @@ async function getstatenumber(data){
         },
       },
     ]);
-   return aaaa[0]._id
+    return aaaa[0]._id;
   } catch (error) {
-    return false
+    return false;
   }
-
 }
-async function agregatecause_reasons_orders(order,data){
+async function agregatecause_reasons_orders(order, data) {
   try {
-    save={
-      _id:await newId()  ,
-      id_orders:order,
-      id_cause_reason:data
-    }
-    await modelcause_reasons_orders.create(save)
-  } catch (error) {
-    
-  }
+    save = {
+      _id: await newId(),
+      id_orders: order,
+      id_cause_reason: data,
+    };
+    await modelcause_reasons_orders.create(save);
+  } catch (error) {}
 }
 
-async function agregatenotes(data,not){
+async function agregatenotes(data, not) {
   try {
-    save={
-      _id:await newId()  ,
-      id_orders:data  ,
-      note:not ,
-      date:Date.now() ,
-    }
-   // console.log(save)
-  await modelnotes.create(save)
-    
+    save = {
+      _id: await newId(),
+      id_orders: data,
+      note: not,
+      date: Date.now(),
+    };
+    // console.log(save)
+    await modelnotes.create(save);
   } catch (error) {
-    console.log(error)
+    console.log(error);
   }
-
- 
 }
-async function agregatepayments(data,value){
-  save={
-    _id:await newId()  ,
-    id_orders:data  ,
-    amount:parseFloat(value)  ,
-    date:Date.now() ,
-  }
- // console.log(save)
-modelpayments.create(save)
+async function agregatepayments(data, value) {
+  save = {
+    _id: await newId(),
+    id_orders: data,
+    amount: parseFloat(value),
+    date: Date.now(),
+  };
+  // console.log(save)
+  modelpayments.create(save);
 }
 module.exports = OrderModels;

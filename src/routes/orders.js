@@ -13,5 +13,6 @@ routes.get('/getpriority',logged,  OrdersController.getpriority);
 routes.get('/getotdertype', logged, OrdersController.gettypeorder);
 routes.get('/getotdernumber', logged, OrdersController.getnumberorder);
 routes.get('/getnerworderdats',logged,  OrdersController.getneworderdats);
+routes.get('/listorders',logged,  OrdersController.listorders);
 // routes.get("/tokenstate",logged,AppController.tokenstate);
 module.exports = routes;

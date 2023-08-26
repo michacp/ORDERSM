@@ -11,7 +11,11 @@ const contacts_ordersScheme = new mongoose.Schema({
       type: String,
       required: true,
     },
-  
+  id_order: {
+    type: mongoose.Types.ObjectId,
+    required: true,
+    
+  },
   },
   {timestamps:true});
   contacts_ordersScheme.plugin(mongoosePaginate)

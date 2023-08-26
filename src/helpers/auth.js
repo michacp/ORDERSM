@@ -14,7 +14,6 @@ auth.Token = async (data) => {
       const pass = bq.verifyPassword(data.pasword_user, buscar[0].pasword_user);
       if (pass) {
         dats = {
-          id:buscar[0]._id,
           user: buscar[0].name_user,
           name: buscar[0].employees.first_name1 + " "+buscar[0].employees.last_name1,
           email:buscar[0].employees.email_business
@@ -24,7 +23,7 @@ auth.Token = async (data) => {
         var privateKey = fs.readFileSync(key.key)//"./keys/jwtRS256.key");
         const token = jwt.sign({ dats }, privateKey, {
           algorithm: "RS256",
-          expiresIn: "1h",
+          expiresIn:"1h",
         });
         delete buscar[0].pasword_user
         return  {token: token,user: buscar[0] } ;
@@ -36,6 +35,7 @@ auth.Token = async (data) => {
     }
   } catch (err) {
     console.log(err)
+    return  false
   }
 };
 
