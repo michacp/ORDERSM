@@ -257,6 +257,20 @@ LogsModels.getonemine = async (data) => {
     return false;
   }
 };
+LogsModels.getallpertable = async (data) => {
+  try {
+    const getalltable = require("../modelsdb/"+ data.table);
+    const myAggregate = await getalltable.find();
+    if (myAggregate.length == 0) {
+      return false;
+    } else {
+      return myAggregate;
+    }
+  } catch (error) {
+    console.log(error)
+    return false;
+  }
+};
 
 LogsModels.savestate = async (data) => {
   try {

@@ -237,7 +237,7 @@ CustomersModels.listage = async () => {
   }
 };
 CustomersModels.listgender = async () => {
-  console.log("customer");
+  //console.log("customer");
   try {
     const groupww = await modelgender.aggregate([
       { $sort: { name: 1 } },

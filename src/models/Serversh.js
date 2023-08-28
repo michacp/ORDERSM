@@ -5,12 +5,8 @@ modelserverusers = require("../modelsdb/serverusers");
 const mongoose = require("mongoose");
 const ObjectId = mongoose.Types.ObjectId;
 
-Servesh.find = async (data) => {
+Servesh.find = async (data,statusserver) => {
   try {
-    // const findcli = await db.query(
-    //   "SELECT id_serverusers,name_server,state_server,name,idstate FROM serverusers INNER JOIN state ON state_server=idstate where id_serverusers=?",
-    //  data
-    //   );
     myAggregate = await modelserverusers.aggregate([
       {
         $match: {
@@ -25,7 +21,7 @@ Servesh.find = async (data) => {
           pipeline: [
             {
               $match: {
-                name: "ENABLE",
+                name: statusserver,
               },
             },
           ],
@@ -41,7 +37,6 @@ Servesh.find = async (data) => {
         },
       },
     ]);
-    //console.log(myAggregate)
     return myAggregate;
   } catch (err) {
     console.log(err);

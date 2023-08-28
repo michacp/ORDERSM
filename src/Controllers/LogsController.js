@@ -17,6 +17,10 @@ LogsController.getonemine = async (req, res) => {
  // console.log(servers)
   res.json( servers);
 };
+LogsController.getallpertable = async (req, res) => {
+  const servers = await logsdpip.getallpertable(req.body);
+   res.json( servers);
+ };
 LogsController.sendstate= async (req, res) => {
  // console.log(req.body)
    //const data=await aux.convert(req.body)

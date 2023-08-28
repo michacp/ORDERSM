@@ -64,9 +64,33 @@ permissions.iscashiers =async (req, res, next) => {
 permissions.isserver=async(req, res, next)=>{
   try {
     
-    const insertar=await server.find(req.body.name_server)
-    //console.log(insertar)
+    const insertar=await server.find(req.body.name_server,"ENABLE")
+    
    if(insertar.lengt==0){
+    res.sendStatus(403)
+   }else{
+    const pass = bq.verifyPassword(req.body.password_server, insertar[0].password_server)
+    if(pass){
+      req.body.idserver=insertar[0]._id
+      next() 
+    }else{
+      res.sendStatus(403)
+    }
+   }
+
+   
+  } catch (error) {
+    console.log(error)
+    res.sendStatus(403)
+  }
+
+}
+permissions.isserverupdate=async(req, res, next)=>{
+  try {
+    
+    const insertar=await server.find(req.body.name_server,"UPDATE")
+   //console.log(insertar)
+   if(insertar.length==0){
     res.sendStatus(403)
    }else{
     const pass = bq.verifyPassword(req.body.password_server, insertar[0].password_server)
