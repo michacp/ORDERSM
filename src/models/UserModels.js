@@ -1,11 +1,11 @@
 const UserModels = {};
 const bq = require("../helpers/bcryptjs");
 const modeluser = require("../modelsdb/users");
-const modelestate = require("../modelsdb/state_user");
-const modelgroup = require("../modelsdb/group");
-const modeluser_group = require("../modelsdb/user_group");
+const modelestate = require("../modelsdb/state_users");
+const modelgroup = require("../modelsdb/groups");
+const modeluser_group = require("../modelsdb/user_groups");
 const mongoose = require("mongoose");
-const gene = require("../modelsdb/gender");
+const gene = require("../modelsdb/genders");
 const modelemployee = require("../modelsdb/employees");
 
 const ObjectId = mongoose.Types.ObjectId;

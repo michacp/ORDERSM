@@ -6,7 +6,7 @@ const modelage = require("../modelsdb/ages");
 const mongoose = require("mongoose");
 const ObjectId = mongoose.Types.ObjectId;
 const { newId } = require("../config/objectId");
-const modelgender = require("../modelsdb/gender");
+const modelgender = require("../modelsdb/genders");
 
 CustomersModels.new = async (data) => {
   try {

@@ -260,14 +260,46 @@ LogsModels.getonemine = async (data) => {
 LogsModels.getallpertable = async (data) => {
   try {
     const getalltable = require("../modelsdb/"+ data.table);
-    const myAggregate = await getalltable.find();
-    if (myAggregate.length == 0) {
-      return false;
+    
+    var myAggregate;
+    var page = data.pagination;
+    var numPerPage = data.numperpage;
+    var skip = (page - 1) * numPerPage;
+
+    myAggregate = await getalltable.aggregate([
+
+      {
+        $facet: {
+          metadata: [
+            { $count: "total" },
+            { $addFields: { page: Number(page) } },
+          ],
+          data: [{ $skip: skip }, { $limit: numPerPage }], // add projection here wish you re-shape the docs
+        },
+      },
+    ]);
+    var numero_de_paginas;
+    var total;
+    if (myAggregate[0].metadata.length == 0) {
+      numero_de_paginas = Math.trunc(0 / numPerPage) + 1;
+      total = 0;
     } else {
-      return myAggregate;
+      numero_de_paginas =
+        Math.trunc(myAggregate[0].metadata[0].total / numPerPage) + 1;
+      total = myAggregate[0].metadata[0].total;
     }
-  } catch (error) {
-    console.log(error)
+
+    const respuesta = {
+      allclients: data.allclients,
+      page_numbers: numero_de_paginas,
+      actual_page: page,
+      number_of_records: total,
+      number_of_records_per_page: numPerPage,
+      intake: myAggregate[0].data,
+    };
+    return respuesta;
+  } catch (err) {
+    console.log(err);
     return false;
   }
 };
